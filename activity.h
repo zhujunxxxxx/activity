@@ -79,6 +79,16 @@ public:
   void yield() const {
     pthread_yield();
   }
+
+  //! Set thread affinity
+  bool setAffinity(std::uint16_t core_id) {
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(core_id, &cpuset);
+    if (pthread_setaffinity_np(_Thread, sizeof(cpu_set_t), &cpuset)) return false;
+    else return true;
+  }
+
 private:
 
   //! Thread entry adapter
