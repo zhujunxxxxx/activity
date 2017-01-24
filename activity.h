@@ -1,5 +1,6 @@
 #pragma once
 #include <thread>
+#define __WITH_ACTIVITY__
 
 /**
  * @class activity
