@@ -1,5 +1,6 @@
 #pragma once
 #include <thread>
+#include <vector>
 #define __WITH_ACTIVITY__
 
 /**
@@ -86,6 +87,31 @@ public:
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
     CPU_SET(core_id, &cpuset);
+    if (pthread_setaffinity_np(_Thread, sizeof(cpu_set_t), &cpuset)) return false;
+    else return true;
+  }
+
+  //! Set affinity to multiple cores
+  bool setAffinity(std::vector<std::uint16_t> core_ids) {
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    for (auto core_id : core_ids) CPU_SET(core_id, &cpuset);
+    if (pthread_setaffinity_np(_Thread, sizeof(cpu_set_t), &cpuset)) return false;
+    else return true;
+  }
+
+  //! Add thread affinity
+  bool addAffinity(std::uint16_t core_id) {
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+
+    // - Get current affinity
+    if (pthread_getaffinity_np(_Thread, sizeof(cpu_set_t), &cpuset)) return false;
+
+    // - Add core
+    CPU_SET(core_id, &cpuset);
+
+    // - Set new affinity
     if (pthread_setaffinity_np(_Thread, sizeof(cpu_set_t), &cpuset)) return false;
     else return true;
   }
