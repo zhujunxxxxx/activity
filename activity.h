@@ -169,6 +169,11 @@ public:
   bool running() {
     return _task.running();
   }
+
+  //! Access task object
+  activity<runnable>& task() {
+    return _task;
+  }
 private:
   activity<runnable>  _task;
 };
