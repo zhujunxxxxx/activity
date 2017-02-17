@@ -1,6 +1,7 @@
 #pragma once
 #include <thread>
 #include <vector>
+#include <set>
 #define __WITH_ACTIVITY__
 
 /**
@@ -50,9 +51,37 @@ public:
   {}
 
   //! Start activity
-  void start() {
+  bool start(std::vector<std::uint16_t> core_ids = std::vector<std::uint16_t>()) {
     _IsRunning = true;
-    pthread_create(&_Thread, NULL, &activity::__run__, this);
+
+    // - Check is need to set affinity
+    if (!core_ids.empty()) {
+      // - Init thread attributes
+      pthread_attr_t  attr;
+      if (pthread_attr_init(&attr)) return false;
+
+      // - Set affinity
+      cpu_set_t cpuset;
+      CPU_ZERO(&cpuset);
+      for (auto core_id : core_ids) {
+        CPU_SET(core_id, &cpuset);
+        _core_ids.insert(core_id);
+      }
+      if (pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpuset)) return false;
+
+      //pthread_attr_setschedpolicy(&attr, SCHED_RR);
+
+      // - Start thread
+      if (pthread_create(&_Thread, &attr, &activity::__run__, this)){
+        pthread_attr_destroy(&attr);
+        return false;
+      } else {
+        pthread_attr_destroy(&attr);
+      }
+    } else {
+      if (pthread_create(&_Thread, nullptr, &activity::__run__, this)) return false;
+    }
+    return true;
   }
 
   //! Stop activity
@@ -88,7 +117,11 @@ public:
     CPU_ZERO(&cpuset);
     CPU_SET(core_id, &cpuset);
     if (pthread_setaffinity_np(_Thread, sizeof(cpu_set_t), &cpuset)) return false;
-    else return true;
+    else {
+      _core_ids.clear();
+      _core_ids.insert(core_id);
+      return true;
+    }
   }
 
   //! Set affinity to multiple cores
@@ -97,7 +130,10 @@ public:
     CPU_ZERO(&cpuset);
     for (auto core_id : core_ids) CPU_SET(core_id, &cpuset);
     if (pthread_setaffinity_np(_Thread, sizeof(cpu_set_t), &cpuset)) return false;
-    else return true;
+    else {
+      for (auto core_id : core_ids) _core_ids.insert(core_id);
+      return true;
+    }
   }
 
   //! Add thread affinity
@@ -113,7 +149,26 @@ public:
 
     // - Set new affinity
     if (pthread_setaffinity_np(_Thread, sizeof(cpu_set_t), &cpuset)) return false;
-    else return true;
+    else {
+      _core_ids.insert(core_id);
+      return true;
+    }
+  }
+
+  //! Get affinity information
+  std::vector<std::uint16_t> getAffinity(std::uint16_t max_cpu = 128) {
+    std::vector<std::uint16_t> result;
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    if (pthread_getaffinity_np(_Thread, sizeof(cpu_set_t), &cpuset)) return result;
+    // - Check CPU
+    _core_ids.clear();
+    for (std::uint16_t cpu_id = 0; cpu_id < max_cpu; cpu_id++) {
+      if (!CPU_ISSET(cpu_id, &cpuset)) continue;
+      _core_ids.insert(cpu_id);
+      result.push_back(cpu_id);
+    }
+    return result;
   }
 
 private:
@@ -135,6 +190,9 @@ private:
 
   //! Pointer to callback function
   std::shared_ptr<callback> _Callback;
+
+  //! Affinity
+  std::set<std::uint16_t>   _core_ids;
 };
 
 /**
