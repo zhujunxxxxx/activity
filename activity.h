@@ -84,6 +84,31 @@ public:
     return true;
   }
 
+  bool start(std::uint16_t core_id) {
+    _IsRunning = true;
+
+    // - Init thread attributes
+    pthread_attr_t  attr;
+    if (pthread_attr_init(&attr)) return false;
+
+    // - Set affinity
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(core_id, &cpuset);
+    _core_ids.insert(core_id);
+
+    if (pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpuset)) return false;
+
+    // - Start thread
+    if (pthread_create(&_Thread, &attr, &activity::__run__, this)){
+      pthread_attr_destroy(&attr);
+      return false;
+    } else {
+      pthread_attr_destroy(&attr);
+    }
+    return true;
+  }
+
   //! Stop activity
   void stop() {
     _IsRunning = false;
