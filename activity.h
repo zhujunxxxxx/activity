@@ -239,18 +239,23 @@ public:
   virtual void run() = 0;
 
   //! Start
-  void start() {
+  virtual void start() {
     _task.start();
   }
 
   //! Stop
-  void stop() {
+  virtual void stop() {
     _task.stop();
   }
 
   //! Running
   bool running() {
     return _task.running();
+  }
+
+  //! Check cancel point
+  void __cancel_point__() {
+    task().__cancel_point__();
   }
 
   //! Access task object
