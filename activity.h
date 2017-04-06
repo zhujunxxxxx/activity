@@ -202,7 +202,8 @@ private:
   static void* __run__(void* args) {
     activity* item = reinterpret_cast<activity*>(args);
     (*item->_Callback)();
-    item->_IsRunning = false;
+    if (item->_IsRunning) item->stop();
+    item->__cancel_point__();
     return nullptr;
   }
 
