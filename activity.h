@@ -196,6 +196,14 @@ public:
     return result;
   }
 
+  //! Set thread priority
+  bool setPriority(int priority) {
+    //sched_param     param;
+    //param.__sched_priority = priority;
+    //return (pthread_setschedparam(_Thread, SCHED_RR, &param) == 0);
+    return true;
+  }
+
 private:
 
   //! Thread entry adapter
